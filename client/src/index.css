@@ -1,0 +1,275 @@
+/*
+ * AV Cable Schedule — Global Styles
+ * Design: Clean Professional Dashboard
+ * Fonts: Barlow Semi Condensed (headers/labels) + Barlow (body/data)
+ * Palette: White bg, slate text, vivid blue primary, semantic status badges
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.18 0.01 250);
+  --card: oklch(0.99 0 0);
+  --card-foreground: oklch(0.18 0.01 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 250);
+  --primary: oklch(0.47 0.22 262);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.005 250);
+  --secondary-foreground: oklch(0.3 0.01 250);
+  --muted: oklch(0.96 0.004 250);
+  --muted-foreground: oklch(0.52 0.01 250);
+  --accent: oklch(0.94 0.01 262);
+  --accent-foreground: oklch(0.35 0.15 262);
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.89 0.005 250);
+  --input: oklch(0.89 0.005 250);
+  --ring: oklch(0.47 0.22 262);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Barlow', system-ui, sans-serif;
+    font-size: 14px;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Barlow Semi Condensed', system-ui, sans-serif;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+      max-width: 1600px;
+    }
+  }
+
+  /* Cable table cell editing */
+  .cable-cell-input {
+    @apply w-full bg-transparent border-0 outline-none text-sm p-0 m-0;
+    font-family: 'Barlow', system-ui, sans-serif;
+  }
+
+  .cable-cell-grow {
+    display: grid;
+  }
+  .cable-cell-grow::after {
+    content: attr(data-value);
+    visibility: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .cable-cell-grow > .cable-cell-wrap,
+  .cable-cell-grow::after {
+    grid-area: 1 / 1 / 2 / 2;
+    font-family: 'Barlow', system-ui, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.35;
+    padding: 2px 0;
+    margin: 0;
+    border: 0;
+  }
+  .cable-cell-wrap {
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  .cable-cell-grow > .cable-cell-wrap:focus {
+    padding-inline: 0;
+  }
+
+  .cable-cell-input:focus {
+    @apply bg-accent/40 rounded px-1;
+  }
+
+  /* Status badge colours */
+  .status-pending    { @apply bg-slate-100 text-slate-600 border border-slate-300; }
+  .status-installed  { @apply bg-blue-50 text-blue-700 border border-blue-200; }
+  .status-tested     { @apply bg-green-50 text-green-700 border border-green-200; }
+  .status-fault      { @apply bg-red-50 text-red-700 border border-red-200; }
+
+  /* Alternating rows */
+  .cable-row-even { @apply bg-white; }
+  .cable-row-odd  { @apply bg-slate-50/60; }
+  .cable-row-even:hover, .cable-row-odd:hover { @apply bg-blue-50/50; }
+}
+
+/* ── Print styles ─────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide all interactive chrome */
+  nav,
+  [data-slot="toaster"],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset page */
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+    font-size: 10pt;
+  }
+
+  /* Let the schedule fill the page */
+  #root,
+  #root > *,
+  .flex.flex-col.h-screen,
+  .flex.flex-col.h-full {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure table is fully visible */
+  .overflow-auto,
+  .overflow-hidden {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Remove sticky positioning for print */
+  .sticky {
+    position: static !important;
+  }
+
+  /* Table formatting */
+  table {
+    width: 100% !important;
+    min-width: unset !important;
+    border-collapse: collapse !important;
+    font-size: 8pt;
+  }
+
+  th, td {
+    padding: 3px 5px !important;
+    border: 1px solid #cbd5e1 !important;
+    white-space: normal !important;
+    word-break: break-word;
+  }
+
+  thead tr {
+    background: #1e293b !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Preserve row colours */
+  tr {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Status badges */
+  .status-pending, .status-installed, .status-tested, .status-fault {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Hide checkbox column when printing */
+  th:first-child, td:first-child {
+    display: none !important;
+  }
+
+  /* Hide action column (delete button) */
+  th:last-child, td:last-child {
+    display: none !important;
+  }
+
+  /* Hide inline inputs — show plain text */
+  .cable-cell-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* Hide select dropdowns — show as plain text */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* Page breaks */
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+
+  /* Footer / legend */
+  .bg-slate-50.border-t {
+    border-top: 1px solid #cbd5e1 !important;
+    padding: 4px 8px !important;
+    font-size: 8pt;
+  }
+}
