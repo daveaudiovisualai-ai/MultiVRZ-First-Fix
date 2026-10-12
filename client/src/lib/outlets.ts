@@ -49,8 +49,8 @@ const fieldPlugs = (prefix: string, area: string, label: string, first: number, 
  * and every spare cable in its own 2-way GOP with one blank.
  * Cables are listed by their number in the app's schedule; from N149 the P2 drawing
  * renumbers the runs, so `drawingCables` gives the drawing's numbers.
- * Not yet in the app's schedule: GOP-REC-03 (N227), NP-REC-01 (N228–N231),
- * GOP-SPR-01 (N192), FP-AUR-01–03 (N232–N234) and FP-CTL-09 (N603).
+ * Lighting button panels BP1–BP3 (FP-CTL-06 to 08) were removed at P2.
+ * Not yet in the app's schedule: GOP-SPR-01 (N192) and FP-AUR-01–03 (N232–N234).
  */
 export const KARRINYUP_OUTLETS: OutletDefinition[] = [
   ...lecterns(1, 101, "A", "A"),
@@ -94,13 +94,16 @@ export const KARRINYUP_OUTLETS: OutletDefinition[] = [
   gop("GOP-VTX-07", "Vortex", "Vortex spare (own GOP, 1 blank)", ["N176"], ["N189"]),
 
   gop("GOP-REC-01", "Reception", "Reception – 75\" QM75C signage (1 blank)", ["N177"], ["N190"]),
+  gop("GOP-REC-03", "Reception", "Reception desk – CCTV monitor HDBaseT RX (1 blank)", ["N227"]),
   gop("GOP-REC-04", "Reception", "Reception spare (own GOP, 1 blank)", ["N178"], ["N191"]),
+  gop("NP-REC-01", "Reception", "Reception desk – 4-way network plate", ["N228", "N229", "N230", "N231"]),
 
   gop("FP-CTL-01", "Vortex", "Touch panel TP1 – Vortex entry", ["N401"]),
   gop("FP-CTL-02", "Vortex", "Touch panel TP2 – Vortex exit", ["N402"]),
   gop("FP-CTL-03", "Briefing Room 1", "Touch panel TP3 – Briefing Room 1", ["N403"]),
   gop("FP-CTL-04", "Briefing Room 2", "Touch panel TP4 – Briefing Room 2", ["N404"]),
   gop("FP-CTL-05", "Briefing Room 3", "Touch panel TP5 – Briefing Room 3", ["N405"]),
+  gop("FP-CTL-09", "Reception", "ChamSys lighting touch panel – reception desk", ["N603"]),
   ...fieldPlugs("CCTV", "Other", "CCTV camera", 501, 16),
   ...fieldPlugs("WAP", "Other", "Wireless access point", 701, 3),
 ];

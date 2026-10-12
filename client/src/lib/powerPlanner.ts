@@ -60,7 +60,14 @@ export function loadPowerStore(): PowerStore {
     const raw = localStorage.getItem(POWER_STORAGE_KEY);
     if (!raw) return { points: [] };
     const parsed = JSON.parse(raw) as Partial<PowerStore>;
-    return { points: Array.isArray(parsed.points) ? parsed.points : [] };
+    const points = Array.isArray(parsed.points) ? parsed.points : [];
+    // KAR-AV P2: the lighting button panels were removed; lighting is run from the ChamSys touch panel at reception.
+    const fixed = points.map((point) => {
+      const notes = (point.notes ?? "").replace(/(switched from |controlled via )?chamsys (wall mounted )?button (panel|controller)/i, "Controlled from the ChamSys touch panel at reception");
+      return notes === point.notes ? point : { ...point, notes };
+    });
+    if (fixed.some((point, i) => point !== points[i])) savePowerStore({ points: fixed });
+    return { points: fixed };
   } catch {
     return { points: [] };
   }

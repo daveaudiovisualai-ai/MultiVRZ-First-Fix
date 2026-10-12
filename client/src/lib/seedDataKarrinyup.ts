@@ -3,6 +3,7 @@ import { type CableRow } from "./cableTypes";
 // Karrinyup schedule: Network Switch 1 (cables 101–147, check-in zones), Network Switch 2/3 (149–199),
 // speakers 401–429 (BiAmp, Audio 01–02; links between speakers are off-rack) and DMX 701–710 (Chamsys GN10, DMX 01).
 // Renumbered N/A/L series and CCTV N501–N516, WAP N701–N703 (panel 05) imported 1 Oct 2026.
+// Lighting button panels BP1–BP3 removed and reception desk outlets (N227–N231, N603) added from KAR-AV P2 drawings, 12 Oct 2026.
 // Imported from Karrinyup_Cable_Schedule_for_editing.xlsx (rackPort = fixed panel:port from the spreadsheet).
 export const KARRINYUP_SWITCH_CABLES: CableRow[] = [
   {
@@ -1215,43 +1216,17 @@ export const KARRINYUP_SWITCH_CABLES: CableRow[] = [
     "rackPort": "network-4:21"
   },
   {
-    "id": "k-197",
-    "cableNumber": "N406",
+    "id": "k-603",
+    "cableNumber": "N603",
     "cableType": "Cat6A LSOH",
     "signalType": "Network",
-    "source": "Network Switch 3 Port 02",
-    "destination": "Vortex Entrance Lighting Button Panel BP1",
+    "source": "Network Switch 4 Port 10",
+    "destination": "Reception Desk ChamSys Lighting Touch Panel",
     "length": "",
     "patchLocation": "Wall Mounted Connection Box",
     "status": "Pending",
-    "notes": "",
+    "notes": "ChamSys touch panel for reception and foyer lighting (FP-CTL-09)",
     "rackPort": "network-4:22"
-  },
-  {
-    "id": "k-198",
-    "cableNumber": "N407",
-    "cableType": "Cat6A LSOH",
-    "signalType": "Network",
-    "source": "Network Switch 3 Port 03",
-    "destination": "Foyer 1 Lighting Button Panel BP2",
-    "length": "",
-    "patchLocation": "Wall Mounted Connection Box",
-    "status": "Pending",
-    "notes": "",
-    "rackPort": "network-4:23"
-  },
-  {
-    "id": "k-199",
-    "cableNumber": "N408",
-    "cableType": "Cat6A LSOH",
-    "signalType": "Network",
-    "source": "Network Switch 3 Port 04",
-    "destination": "Foyer 2 Lighting Button Panel BP3",
-    "length": "",
-    "patchLocation": "Wall Mounted Connection Box",
-    "status": "Pending",
-    "notes": "",
-    "rackPort": "network-4:24"
   },
   {
     "id": "k-711-mupewn9a",
@@ -1499,6 +1474,71 @@ export const KARRINYUP_SWITCH_CABLES: CableRow[] = [
     "notes": "",
     "rackPort": "network-5:19",
     "length": ""
+  },
+  {
+    "id": "k-227",
+    "cableNumber": "N227",
+    "cableType": "Cat6A LSOH",
+    "signalType": "Network",
+    "source": "HDMI HDBaseT Extender TX (CCTV NVR)",
+    "destination": "Reception Desk CCTV Monitor HDBaseT RX",
+    "length": "",
+    "patchLocation": "Wall Mounted Connection Box",
+    "status": "Pending",
+    "notes": "HDBaseT over Cat6A from the CCTV NVR to the reception desk monitor (GOP-REC-03, 1 blank)",
+    "rackPort": "network-5:20"
+  },
+  {
+    "id": "k-228",
+    "cableNumber": "N228",
+    "cableType": "Cat6A LSOH",
+    "signalType": "Network",
+    "source": "Network Switch 4 Port 26",
+    "destination": "Reception Desk Network Point 1",
+    "length": "",
+    "patchLocation": "Wall Mounted Connection Box",
+    "status": "Pending",
+    "notes": "4-way network plate NP-REC-01",
+    "rackPort": "network-5:21"
+  },
+  {
+    "id": "k-229",
+    "cableNumber": "N229",
+    "cableType": "Cat6A LSOH",
+    "signalType": "Network",
+    "source": "Network Switch 4 Port 27",
+    "destination": "Reception Desk Network Point 2",
+    "length": "",
+    "patchLocation": "Wall Mounted Connection Box",
+    "status": "Pending",
+    "notes": "4-way network plate NP-REC-01",
+    "rackPort": "network-5:22"
+  },
+  {
+    "id": "k-230",
+    "cableNumber": "N230",
+    "cableType": "Cat6A LSOH",
+    "signalType": "Network",
+    "source": "Network Switch 4 Port 28",
+    "destination": "Reception Desk Network Point 3",
+    "length": "",
+    "patchLocation": "Wall Mounted Connection Box",
+    "status": "Pending",
+    "notes": "4-way network plate NP-REC-01",
+    "rackPort": "network-5:23"
+  },
+  {
+    "id": "k-231",
+    "cableNumber": "N231",
+    "cableType": "Cat6A LSOH",
+    "signalType": "Network",
+    "source": "Network Switch 4 Port 29",
+    "destination": "Reception Desk Network Point 4",
+    "length": "",
+    "patchLocation": "Wall Mounted Connection Box",
+    "status": "Pending",
+    "notes": "4-way network plate NP-REC-01",
+    "rackPort": "network-5:24"
   },
   {
     "id": "k-401",
