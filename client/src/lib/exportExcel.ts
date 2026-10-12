@@ -1,4 +1,5 @@
 import { leadTypeLabel } from "./patchLeads";
+import { outletIdFor } from "./outlets";
 import { saveFile } from "@/lib/saveFile";
 // AV Cable Schedule — Excel export utility
 import * as XLSX from "xlsx";
@@ -24,6 +25,7 @@ export function exportToExcel(cables: CableRow[], site: SiteDetails): void {
     "Signal Type",
     "Source",
     "Destination",
+    "Outlet / GOP",
     "Length",
     "Patch / Rack Location",
     "47U-12U Lead Type",
@@ -46,6 +48,7 @@ export function exportToExcel(cables: CableRow[], site: SiteDetails): void {
     c.signalType,
     c.source,
     c.destination,
+    outletIdFor(c),
     c.length,
     c.patchLocation,
     leadTypeLabel(c),
@@ -72,6 +75,7 @@ export function exportToExcel(cables: CableRow[], site: SiteDetails): void {
     { wch: 14 },  // Signal Type
     { wch: 24 },  // Source
     { wch: 24 },  // Destination
+    { wch: 14 },  // Outlet / GOP
     { wch: 10 },  // Length
     { wch: 22 },  // Patch Location
     { wch: 30 },  // lead type

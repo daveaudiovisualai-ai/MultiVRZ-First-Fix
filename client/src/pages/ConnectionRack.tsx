@@ -5,7 +5,7 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { requestFocus, takeFocus } from "@/lib/crossLink";
 import { cableCategory } from "@/lib/cableCategory";
-import { dropIdForDestination, loadDestinationPlannerStore } from "@/lib/destinationPlanner";
+import { dropIdForCable, dropPositionForCable, loadDestinationPlannerStore } from "@/lib/destinationPlanner";
 import { AlertTriangle, Cable, CheckCircle2, ChevronDown, ChevronRight, CircleHelp, Package, Printer, RefreshCw, ShieldCheck, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -274,7 +274,7 @@ export default function ConnectionRack() {
   }, []);
 
   const showDropOnPlan = (circuit: RackCircuit) => {
-    requestFocus({ type: "drop", id: dropIdForDestination(circuit.destination) });
+    requestFocus({ type: "drop", id: dropIdForCable(circuit) });
     const category = cableCategory(circuit);
     navigate(category === "cctv" || category === "wap" ? "/cctv-wifi" : "/destination-drops");
   };
@@ -449,7 +449,7 @@ export default function ConnectionRack() {
                       {!selectedCircuit.planned && selectedCircuit.destination && (
                         <button type="button" onClick={() => showDropOnPlan(selectedCircuit)} className="inline-flex items-center gap-1.5 rounded-md border border-cyan-300 bg-cyan-50 px-2.5 py-1.5 text-xs font-semibold text-cyan-800 hover:bg-cyan-100">
                           <MapPin className="h-3.5 w-3.5" />
-                          {dropPositions[dropIdForDestination(selectedCircuit.destination)] ? "Show drop on plan" : "Place drop on plan"} ›
+                          {dropPositionForCable(dropPositions, selectedCircuit) ? "Show drop on plan" : "Place drop on plan"} ›
                         </button>
                       )}
                     </div>

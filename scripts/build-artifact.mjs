@@ -70,6 +70,8 @@ const cdnPlugin = {
     // Bare package imports from app source
     build.onResolve({ filter: /^[^./]/ }, (args) => {
       if (args.namespace === "cdn") return; // handled below
+      // LOCAL_PACKAGES=1 bundles the installed node_modules instead (same pinned versions, no CDN access needed).
+      if (process.env.LOCAL_PACKAGES) return;
       if (args.path.startsWith("@/") || args.path.startsWith("@shared/") || args.path.startsWith("http")) return;
       const { name, sub } = splitSpec(args.path);
       const version = PIN[name];

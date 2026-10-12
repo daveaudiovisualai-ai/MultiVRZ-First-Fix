@@ -1,3 +1,4 @@
+import { outletIdFor } from "@/lib/outlets";
 import { LEAD_KIND_LABEL, leadKindOf, leadTypeLabel, needsHdmi, needsUsb, PATCH_LEAD_COLOURS, patchColour } from "@/lib/patchLeads";
 /*
  * CableTableRow — single editable row in the cable schedule table
@@ -216,6 +217,15 @@ export default function CableTableRow({ row, index, selected = false, onSelect, 
           value={row.destination}
           onChange={(v) => onChange(row.id, "destination", v)}
           placeholder="Destination device / location"
+        />
+      </td>
+      {/* Outlet: cables with the same outlet share one GOP box */}
+      <td className="px-3 py-1.5 border-r border-border/40 min-w-[130px]" title="Cables with the same outlet share one GOP box. Clear it to give this cable its own drop.">
+        <TextCell
+          value={row.outlet ?? outletIdFor(row)}
+          onChange={(v) => onChange(row.id, "outlet", v.toUpperCase())}
+          placeholder="e.g. GOP-01"
+          mono
         />
       </td>
       {/* Length */}

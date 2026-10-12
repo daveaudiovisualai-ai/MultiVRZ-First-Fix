@@ -61,6 +61,12 @@ export interface CableRow {
    * Blank = allocated automatically.
    */
   rackPort?: string;
+  /**
+   * Outlet at the remote end (GOP box, network plate or field plug), e.g. "GOP-CI1-01".
+   * Cables with the same outlet share one box. Unset = the site's outlet register;
+   * blank = no shared outlet.
+   */
+  outlet?: string;
   /** Patch lead from the 47U rack switch to this cable's 12U rack port. */
   patchLeadColour?: string;
   patchLeadLength?: string;

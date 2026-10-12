@@ -44,7 +44,7 @@ export interface EndpointDrop {
   cableType: string;
   signalType: string;
   length: string;
-  boxRequirement: "None" | "2-way GOP" | "4-way GOP" | "TBC";
+  boxRequirement: "None" | "2-way GOP" | "4-way GOP" | "Field plug" | "TBC";
   notes: string;
   status: CableRow["status"];
 }
@@ -279,19 +279,21 @@ export function buildConsumablesPlan(cables: CableRow[], estimate?: LengthEstima
   const dmx = cables.filter(isDmx);
   const fibre = cables.filter(isFibre);
 
-  // Network drops are grouped by destination, exactly as on the AV Drops page.
+  // Network drops are grouped exactly as on the AV Drops page: by shared outlet, otherwise by destination.
   const drops = buildDestinationDrops(cables).filter((d) => d.networkCableCount > 0);
-  const gopByDestination = new Map(drops.map((d) => [d.label.trim().toLowerCase(), d.gopType]));
+  const dropByCable = new Map(drops.flatMap((d) => d.cables.map((c) => [c.id, d] as const)));
   const endpoints = cables
-    .map(endpointFromCable)
-    .filter((endpoint): endpoint is EndpointDrop => Boolean(endpoint))
-    .map((endpoint) => {
-      if (endpoint.endpointType !== "GOP Box") return endpoint;
-      const gop = gopByDestination.get(endpoint.location.trim().toLowerCase());
-      return { ...endpoint, boxRequirement: gop === "4-way GOP" || gop === "Multiple 4-way GOP" ? "4-way GOP" : "2-way GOP" } as EndpointDrop;
-    });
+    .map((cable) => {
+      const endpoint = endpointFromCable(cable);
+      if (!endpoint || endpoint.endpointType !== "GOP Box") return endpoint;
+      const drop = dropByCable.get(cable.id);
+      const location = drop?.outletId ? `${drop.outletId} · ${endpoint.location}` : endpoint.location;
+      if (drop?.gopType === "Field plug") return { ...endpoint, endpointType: "Network Point", location, boxRequirement: "Field plug" } as EndpointDrop;
+      return { ...endpoint, location, boxRequirement: drop?.gopType === "4-way GOP" || drop?.gopType === "Multiple 4-way GOP" ? "4-way GOP" : "2-way GOP" } as EndpointDrop;
+    })
+    .filter((endpoint): endpoint is EndpointDrop => Boolean(endpoint));
   const twoWayGop = drops.filter((d) => d.gopType === "2-way GOP").reduce((n, d) => n + d.gopQuantity, 0);
-  const fourWayGop = drops.filter((d) => d.gopType !== "2-way GOP").reduce((n, d) => n + d.gopQuantity, 0);
+  const fourWayGop = drops.filter((d) => d.gopType === "4-way GOP" || d.gopType === "Multiple 4-way GOP").reduce((n, d) => n + d.gopQuantity, 0);
 
   const sumLength = (list: CableRow[]) => list.reduce((sum, cable) => sum + parseMetres(cable.length || ""), 0);
   const networkLength = sumLength(network);
@@ -391,7 +393,7 @@ export function buildConsumablesPlan(cables: CableRow[], estimate?: LengthEstima
     materials.push(product("excel-gop-2way", "GOP Box", "Excel 2 Way GOP Box Plus 25 mm (10-Pack)", "350-639",
       "2-way GOP box with 25 mm conduit knockout; accepts Cat5e/Cat6/Cat6A modules; supplied as a 10-pack.",
       roundedUp(twoWayGop, 10), "10-packs", OFFICIAL_PRODUCT_LINKS.gop2,
-      `${twoWayGop} network drop locations with 1–2 cables (from the AV Drops page).`));
+      `${twoWayGop} two-way GOP box(es): one per outlet with 1–2 network cables, so cables sharing an outlet share a box (from the AV Drops page).`));
   }
   if (fourWayGop) {
     materials.push(product("excel-gop-4way", "GOP Box", "Excel 4 Way GOP Box Plus 25 mm (10-Pack)", "350-640",
