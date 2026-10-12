@@ -23,7 +23,7 @@ On first start the store is seeded from `deploy/seed.json`, a copy of the Karrin
 Edit the code in `client/src`, then:
 
 ```
-node scripts/build-artifact.mjs   # builds dist-artifact/
+node scripts/build-artifact.mjs   # builds dist-artifact/ (LOCAL_PACKAGES=1 VENDOR_DIR=node_modules bundles from pnpm install instead of jsDelivr)
 ./scripts/make-deploy.sh          # copies it into deploy/public
 git commit -am "…" && git push    # Railway redeploys automatically
 ```

@@ -1,4 +1,5 @@
 import { leadKindOf, DEFAULT_PATCH_LEAD_LENGTH, hasPatchLead, patchColour, patchLeadSummary } from "@/lib/patchLeads";
+import { outletIdFor } from "@/lib/outlets";
 import { confirmAction } from "@/lib/confirmAction";
 /*
  * CableTable — full-width scrollable cable schedule table
@@ -55,6 +56,7 @@ const COLUMNS = [
   { label: "Signal Type",          width: "min-w-[110px]" },
   { label: "Source",               width: "min-w-[200px]" },
   { label: "Destination",          width: "min-w-[320px]" },
+  { label: "Outlet / GOP",         width: "min-w-[130px]" },
   { label: "Length",               width: "min-w-[90px]"  },
   { label: "Patch / Rack Location",width: "min-w-[210px]" },
   { label: "Lead 47U → 12U", width: "min-w-[170px]" },
@@ -199,6 +201,7 @@ function MobileCableCard({
             <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
               {row.cableType && (<><span className="text-slate-500 font-medium">Cable Type</span><span className="text-slate-800">{row.cableType}</span></>)}
               {row.signalType && (<><span className="text-slate-500 font-medium">Signal Type</span><span className="text-slate-800">{row.signalType}</span></>)}
+              {outletIdFor(row) && (<><span className="text-slate-500 font-medium">Outlet / GOP</span><span className="font-mono text-slate-800">{outletIdFor(row)}</span></>)}
               {row.length && (<><span className="text-slate-500 font-medium">Length</span><span className="text-slate-800">{row.length}</span></>)}
               {row.patchLocation && (<><span className="text-slate-500 font-medium">Patch/Rack</span><span className="text-slate-800">{row.patchLocation}</span></>)}
               {hasPatchLead(row) && (<><span className="text-slate-500 font-medium">47U → 12U lead</span><span className="inline-flex items-center gap-1.5 text-slate-800"><span className="h-2.5 w-2.5 rounded-full border border-slate-400" style={{ background: patchColour(row.patchLeadColour)?.hex ?? "transparent" }} />{patchLeadSummary(row)}</span></>)}

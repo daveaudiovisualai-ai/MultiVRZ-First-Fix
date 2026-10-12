@@ -25,11 +25,11 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import PlanCanvas, { type PlacedMarker } from "@/components/PlanCanvas";
 import { CABLE_CATEGORY_META, dominantCategory, type CableCategory } from "@/lib/cableCategory";
-import { AREA_ORDER, areaOf } from "@/lib/areas";
+import { AREA_ORDER } from "@/lib/areas";
 import { Link, useLocation } from "wouter";
 import { requestFocus, takeFocus } from "@/lib/crossLink";
 import { CABLE_STORAGE_KEY } from "@/lib/scheduleStorage";
-import { defaultDrawingForSite, dropIdForDestination, type DropDevice } from "@/lib/destinationPlanner";
+import { defaultDrawingForSite, dropArea, dropBoxLabel as boxLabel, dropGopLabel as gopLabel, dropIdForCable, positionIdsForDrop, resolveDropPositions, type DropDevice } from "@/lib/destinationPlanner";
 import { loadRackPlanFromSchedule, type RackPlan } from "@/lib/rackPlanner";
 
 const RACK_MARKER_ID = "__connection-rack";
@@ -80,6 +80,7 @@ type DestinationSchedule = ReturnType<typeof loadDestinationSchedule>;
 
 function gopStyle(drop: DestinationDrop) {
   if (drop.gopType === "Not required") return "border-slate-200 bg-slate-100 text-slate-700";
+  if (drop.gopType === "Field plug") return "border-emerald-200 bg-emerald-50 text-emerald-800";
   if (drop.gopType === "2-way GOP") return "border-cyan-200 bg-cyan-50 text-cyan-800";
   if (drop.gopType === "4-way GOP") return "border-violet-200 bg-violet-50 text-violet-800";
   return "border-amber-200 bg-amber-50 text-amber-900";
@@ -118,7 +119,9 @@ function DropMarker({
   selected: boolean;
   onClick: () => void;
 }) {
-  const markerClass = drop.gopType === "2-way GOP"
+  const markerClass = drop.gopType === "Field plug"
+    ? "border-emerald-200 bg-emerald-600"
+    : drop.gopType === "2-way GOP"
     ? "border-cyan-200 bg-cyan-500"
     : drop.gopType === "4-way GOP" || drop.gopType === "Multiple 4-way GOP"
       ? "border-violet-200 bg-violet-600"
@@ -128,7 +131,7 @@ function DropMarker({
     <button
       type="button"
       onClick={onClick}
-      title={`${drop.label} · ${drop.gopQuantity ? `${drop.gopQuantity} × ${drop.gopType}` : "No GOP"} · ${drop.cableCount} cable${drop.cableCount === 1 ? "" : "s"}`}
+      title={`${drop.label} · ${gopLabel(drop)} · ${drop.cableCount} cable${drop.cableCount === 1 ? "" : "s"}`}
       aria-label={`Select destination drop ${drop.label}`}
       className={`absolute z-20 flex h-5 w-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 text-[8px] font-bold text-white shadow-lg transition duration-150 hover:scale-125 focus:scale-125 ${markerClass} ${selected ? "h-8 w-8 ring-4 ring-white/70" : ""}`}
       style={{ left: `${position.x}%`, top: `${position.y}%` }}
@@ -195,6 +198,14 @@ function DropInfo({ drop, onShowOnRack, deviceEditor }: { drop: DestinationDrop;
           </div>
           <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-bold ${gopStyle(drop)}`}>{drop.gopType}</span>
         </div>
+        {drop.outletId && (
+          <p className="mt-3 rounded-lg border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-xs leading-5 text-cyan-950">
+            <span className="font-mono font-bold">{drop.outletId}</span>
+            {drop.gopType === "Field plug"
+              ? " · field plug, no GOP box"
+              : ` · ${drop.networkCableCount} cable${drop.networkCableCount === 1 ? "" : "s"} (${drop.cables.map((cable) => cable.cableNumber).join(", ")}) in ${boxLabel(drop)}`}
+          </p>
+        )}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Cable drops</p><p className="mt-1 text-2xl font-bold text-slate-900">{drop.cableCount}</p></div>
           <div className="rounded-lg bg-slate-50 p-3"><p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">GOP allocation</p><p className="mt-1 text-2xl font-bold text-slate-900">{drop.gopQuantity || "—"}</p></div>
@@ -315,6 +326,8 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
   const [showAllMarkers, setShowAllMarkers] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const drops = useMemo(() => dropsForVariant(schedule.drops, variant), [schedule, variant]);
+  // Drops grouped into a shared outlet keep the position placed for any of their cables.
+  const positions = useMemo(() => resolveDropPositions(store.positions, drops), [store.positions, drops]);
   const rackPlan = useMemo(() => loadRackPlanFromSchedule(), [schedule]);
   // The connection rack is placed on the plan like a drop, but drawn as a yellow square.
   const rackItem: DestinationDrop = useMemo(() => ({
@@ -337,12 +350,12 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
   const [areaFilter, setAreaFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState<"all" | CableCategory>("all");
   const passesFilters = (drop: DestinationDrop) =>
-    (areaFilter === "all" || areaOf(drop.label) === areaFilter) && (typeFilter === "all" || categoryOf(drop) === typeFilter);
+    (areaFilter === "all" || dropArea(drop) === areaFilter) && (typeFilter === "all" || categoryOf(drop) === typeFilter);
   const areaCounts = useMemo(() => {
     const counts = new Map<string, number>();
     drops.forEach((drop) => {
       if (typeFilter !== "all" && dominantCategory(drop.cables) !== typeFilter) return;
-      const area = areaOf(drop.label);
+      const area = dropArea(drop);
       counts.set(area, (counts.get(area) ?? 0) + 1);
     });
     return AREA_ORDER.filter((area) => counts.has(area)).map((area) => [area, counts.get(area)!] as const);
@@ -350,7 +363,7 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
   const typeCounts = useMemo(() => {
     const counts = new Map<CableCategory, number>();
     drops.forEach((drop) => {
-      if (areaFilter !== "all" && areaOf(drop.label) !== areaFilter) return;
+      if (areaFilter !== "all" && dropArea(drop) !== areaFilter) return;
       const category = dominantCategory(drop.cables);
       counts.set(category, (counts.get(category) ?? 0) + 1);
     });
@@ -369,13 +382,13 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
   const searchMatches = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = drops.filter(passesFilters);
-    return query ? filtered.filter((drop) => `${drop.label} ${drop.cableTypes.join(" ")} ${drop.signalTypes.join(" ")}`.toLowerCase().includes(query)) : filtered;
+    return query ? filtered.filter((drop) => `${drop.label} ${drop.outletId ?? ""} ${drop.cables.map((c) => c.cableNumber).join(" ")} ${drop.cableTypes.join(" ")} ${drop.signalTypes.join(" ")}`.toLowerCase().includes(query)) : filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drops, search, areaFilter, typeFilter]);
   const [placingDropId, setPlacingDropId] = useState<string | null>(null);
   const placingDrop = allItems.find((drop) => drop.id === placingDropId);
-  const placedCount = drops.filter((drop) => store.positions[drop.id]).length;
-  const listDrops = searchMatches.filter((drop) => listFilter === "all" || (listFilter === "placed") === Boolean(store.positions[drop.id]));
+  const placedCount = drops.filter((drop) => positions[drop.id]).length;
+  const listDrops = searchMatches.filter((drop) => listFilter === "all" || (listFilter === "placed") === Boolean(positions[drop.id]));
   const categoriesPresent = useMemo(() => {
     const counts = new Map<CableCategory, number>();
     drops.forEach((drop) => {
@@ -413,14 +426,14 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
     }
     const refreshed = loadDestinationSchedule();
     setSchedule(refreshed);
-    const id = dropIdForDestination(destination);
+    const id = dropIdForCable(row);
     setSelectedDropId(id);
     setPlacingDropId(id);
     toast.success(`Cable ${next} added for ${destination}. Tap the plan to position it.`);
   };
 
   const positionFor = (drop: DestinationDrop) => {
-    const stored = store.positions[drop.id];
+    const stored = positions[drop.id];
     if (stored) return stored;
     if (drop.id === RACK_MARKER_ID) return { dropId: drop.id, x: 50, y: 50 };
     const index = drops.findIndex((candidate) => candidate.id === drop.id);
@@ -430,7 +443,7 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
   // Placed drops always show; unplaced ones show when selected or when "Show all" is on.
   // Cable-type chips hide or show whole categories on the plan.
   const canvasMarkers: PlacedMarker[] = searchMatches
-    .filter((drop) => showAllMarkers || store.positions[drop.id] || drop.id === selectedDrop?.id)
+    .filter((drop) => showAllMarkers || positions[drop.id] || drop.id === selectedDrop?.id)
     .filter((drop) => !hiddenCategories.has(categoryOf(drop)) || drop.id === selectedDrop?.id)
     .map((drop) => {
       const position = positionFor(drop);
@@ -441,20 +454,20 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
         drop,
         x: position.x,
         y: position.y,
-        placed: Boolean(store.positions[drop.id]),
+        placed: Boolean(positions[drop.id]),
         colour: CABLE_CATEGORY_META[category].colour,
         badge: isDevice ? deviceNumber(drop.label) : undefined,
         kindLabel: isDevice ? (category === "cctv" ? "CCTV camera" : "Wireless access point") : undefined,
         popupExtra: isDevice ? <DeviceSummary device={store.devices?.[drop.id]} kind={category as "cctv" | "wap"} /> : undefined,
       };
     });
-  if (showAllMarkers || store.positions[RACK_MARKER_ID] || rackSelected) {
+  if (showAllMarkers || positions[RACK_MARKER_ID] || rackSelected) {
     const position = positionFor(rackItem);
     canvasMarkers.push({
       drop: rackItem,
       x: position.x,
       y: position.y,
-      placed: Boolean(store.positions[RACK_MARKER_ID]),
+      placed: Boolean(positions[RACK_MARKER_ID]),
       variant: "rack",
       popupBody: <RackSummary plan={rackPlan} compact />,
     });
@@ -472,7 +485,7 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
     setPlacingDropId(null);
   };
 
-  const selectedPlaced = Boolean(selectedDrop && store.positions[selectedDrop.id]);
+  const selectedPlaced = Boolean(selectedDrop && positions[selectedDrop.id]);
 
   const updateDevice = (dropId: string, patch: DropDevice) =>
     setStore((existing) => ({ ...existing, devices: { ...(existing.devices ?? {}), [dropId]: { ...(existing.devices?.[dropId] ?? {}), ...patch } } }));
@@ -496,9 +509,10 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
 
   const removePlacement = (dropId: string) => {
     setStore((existing) => {
-      const positions = { ...existing.positions };
-      delete positions[dropId];
-      return { ...existing, positions };
+      const next = { ...existing.positions };
+      const drop = drops.find((candidate) => candidate.id === dropId);
+      (drop ? positionIdsForDrop(drop) : [dropId]).forEach((id) => delete next[id]);
+      return { ...existing, positions: next };
     });
   };
 
@@ -580,11 +594,11 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
 
       <main className="mx-auto max-w-7xl space-y-5 px-4 py-5 sm:px-6 lg:px-8">
         {schedule.isProjectSchedule && !schedule.cables.length ? <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"><div className="flex items-start gap-3"><AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" /><div><p className="font-bold">No project cable rows are available yet.</p><p className="mt-1 text-amber-900">Create or import the project cable schedule first. Its destination names will then appear here as placeable drops.</p></div></div></div> : <>
-          <section className="grid gap-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-700" /><div><h2 className="font-bold text-cyan-950">Automatic GOP sizing</h2><p className="mt-1 text-sm leading-6 text-cyan-900">Each destination combines its schedule rows. One or two network cables produce a 2-way GOP; three or four network cables produce a 4-way GOP; larger drops calculate multiple 4-way GOPs. Non-network routes are retained at the same destination without adding a GOP.</p></div></div><span className="rounded-full border border-cyan-300 bg-white px-3 py-1.5 text-xs font-bold text-cyan-800">{schedule.site.siteName || schedule.site.jobNumber || "Current project"}</span></section>
+          <section className="grid gap-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"><div className="flex gap-3"><CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-cyan-700" /><div><h2 className="font-bold text-cyan-950">Automatic GOP sizing</h2><p className="mt-1 text-sm leading-6 text-cyan-900">Cables that share an outlet (the Outlet / GOP column in the cable schedule) are terminated in one box, so two cables make one 2-way GOP rather than two. Other cables are combined by destination. One or two network cables produce a 2-way GOP; three or four produce a 4-way GOP; larger drops calculate multiple 4-way GOPs. FP- outlets are field plugs and need no GOP. Non-network routes stay at the same drop without adding a GOP.</p></div></div><span className="rounded-full border border-cyan-300 bg-white px-3 py-1.5 text-xs font-bold text-cyan-800">{schedule.site.siteName || schedule.site.jobNumber || "Current project"}</span></section>
 
           <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div ref={canvasRef} className="scroll-mt-2 overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm">
-              <div className="flex flex-col justify-between gap-3 border-b border-slate-200 bg-slate-900 px-4 py-3 text-white sm:flex-row sm:items-center"><div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-300">Interactive plan canvas</p><h2 className="mt-0.5 text-base font-bold">{store.drawing?.fileName || "Destination cable-drop view"}</h2></div><div className="flex flex-wrap items-center gap-2 text-xs"><button onClick={() => setShowAllMarkers((value) => !value)} className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 font-semibold ${showAllMarkers ? "border-cyan-400 bg-cyan-400 text-slate-950" : "border-slate-700 bg-slate-800 text-slate-300 hover:text-white"}`}><CircleDot className="h-3.5 w-3.5" />{showAllMarkers ? "Showing all drops" : "Show unplaced drops"}</button>{isSecurity && !schedule.isProjectSchedule && <><button onClick={() => quickAdd("cctv")} className="inline-flex items-center gap-1 rounded-md border border-blue-400 bg-blue-600 px-2 py-1 font-semibold text-white hover:bg-blue-500"><span className="h-2.5 w-2.5 rounded-full bg-white/90" />Add camera</button><button onClick={() => quickAdd("wap")} className="inline-flex items-center gap-1 rounded-md border border-lime-500 bg-lime-600 px-2 py-1 font-semibold text-white hover:bg-lime-500"><span className="h-2.5 w-2.5 rounded-full bg-white/90" />Add WAP</button></>}<button onClick={() => startPlacing(RACK_MARKER_ID)} className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-400 px-2 py-1 font-semibold text-amber-950 hover:bg-amber-300"><span className="h-2.5 w-2.5 rounded-[2px] border border-amber-900/40 bg-amber-200" />{store.positions[RACK_MARKER_ID] ? "Move rack" : "Add rack"}</button>{store.drawing && <button onClick={clearDrawing} className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"><Trash2 className="h-3.5 w-3.5" /> Clear</button>}</div></div>
+              <div className="flex flex-col justify-between gap-3 border-b border-slate-200 bg-slate-900 px-4 py-3 text-white sm:flex-row sm:items-center"><div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-300">Interactive plan canvas</p><h2 className="mt-0.5 text-base font-bold">{store.drawing?.fileName || "Destination cable-drop view"}</h2></div><div className="flex flex-wrap items-center gap-2 text-xs"><button onClick={() => setShowAllMarkers((value) => !value)} className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 font-semibold ${showAllMarkers ? "border-cyan-400 bg-cyan-400 text-slate-950" : "border-slate-700 bg-slate-800 text-slate-300 hover:text-white"}`}><CircleDot className="h-3.5 w-3.5" />{showAllMarkers ? "Showing all drops" : "Show unplaced drops"}</button>{isSecurity && !schedule.isProjectSchedule && <><button onClick={() => quickAdd("cctv")} className="inline-flex items-center gap-1 rounded-md border border-blue-400 bg-blue-600 px-2 py-1 font-semibold text-white hover:bg-blue-500"><span className="h-2.5 w-2.5 rounded-full bg-white/90" />Add camera</button><button onClick={() => quickAdd("wap")} className="inline-flex items-center gap-1 rounded-md border border-lime-500 bg-lime-600 px-2 py-1 font-semibold text-white hover:bg-lime-500"><span className="h-2.5 w-2.5 rounded-full bg-white/90" />Add WAP</button></>}<button onClick={() => startPlacing(RACK_MARKER_ID)} className="inline-flex items-center gap-1 rounded-md border border-amber-300 bg-amber-400 px-2 py-1 font-semibold text-amber-950 hover:bg-amber-300"><span className="h-2.5 w-2.5 rounded-[2px] border border-amber-900/40 bg-amber-200" />{positions[RACK_MARKER_ID] ? "Move rack" : "Add rack"}</button>{store.drawing && <button onClick={clearDrawing} className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold text-slate-300 hover:bg-slate-800 hover:text-white"><Trash2 className="h-3.5 w-3.5" /> Clear</button>}</div></div>
               <div className="p-3 sm:p-4">
                 <PlanCanvas
                   drawing={store.drawing}
@@ -641,10 +655,10 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
                         onChange={(event) => setSelectedDropId(event.target.value)}
                         className="h-8 min-w-0 flex-1 basis-48 rounded-md border border-slate-300 bg-white px-2 text-xs font-semibold text-slate-800"
                       >
-                        <option value={RACK_MARKER_ID}>{store.positions[RACK_MARKER_ID] ? "■ " : "□ "}Connection Rack</option>
+                        <option value={RACK_MARKER_ID}>{positions[RACK_MARKER_ID] ? "■ " : "□ "}Connection Rack</option>
                         {drops.filter((drop) => passesFilters(drop) || drop.id === selectedDrop.id).map((drop) => (
                           <option key={drop.id} value={drop.id}>
-                            {store.positions[drop.id] ? "● " : "○ "}{drop.label}
+                            {positions[drop.id] ? "● " : "○ "}{drop.label}
                           </option>
                         ))}
                       </select>
@@ -705,7 +719,7 @@ export default function DestinationDrops({ variant = "av" }: { variant?: DropsVa
             {isSecurity && !drops.length && !rackSelected ? <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-sm leading-6 text-slate-600"><p className="font-semibold text-slate-800">No cameras or access points in the schedule yet.</p><p className="mt-1">Use <strong>Add camera</strong> or <strong>Add WAP</strong> above the plan. Each one adds a Cat6A cable to the cable schedule (next cable number) for you to edit, then you tap its position. Cables whose destination mentions CCTV, camera, WAP or access point appear here automatically.</p></div> : rackSelected ? <aside className="space-y-4"><section className="rounded-xl border border-amber-300 bg-white p-4 shadow-sm"><RackSummary plan={rackPlan} /></section></aside> : selectedDrop ? <DropInfo drop={selectedDrop} onShowOnRack={showOnRack} deviceEditor={isSecurity && (categoryOf(selectedDrop) === "cctv" || categoryOf(selectedDrop) === "wap") ? <DeviceEditor device={store.devices?.[selectedDrop.id]} kind={categoryOf(selectedDrop) as "cctv" | "wap"} onChange={(patch) => updateDevice(selectedDrop.id, patch)} /> : undefined} /> : <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-slate-500">No destination points found.</div>}
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center"><div className="flex items-center gap-2"><Network className="h-4 w-4 text-cyan-700" /><h2 className="text-sm font-bold uppercase tracking-[0.1em] text-slate-800">{isSecurity ? "Cameras and access points" : "AV destinations"}</h2><span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{listDrops.length} shown</span></div><div className="inline-flex overflow-hidden rounded-md border border-slate-300 text-xs font-semibold">{([["all", `All ${drops.length}`], ["placed", `On plan ${placedCount}`], ["unplaced", `Not placed ${drops.length - placedCount}`]] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setListFilter(value)} aria-pressed={listFilter === value} className={`border-r border-slate-200 px-2.5 py-1.5 last:border-r-0 ${listFilter === value ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{label}</button>)}</div><div className="relative sm:ml-auto sm:w-72"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find destination or cable type…" className="h-9 pl-8 text-xs" /></div></div><div className="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">{listDrops.map((drop) => { const placed = Boolean(store.positions[drop.id]); return <button key={drop.id} onClick={() => selectFromList(drop.id)} className={`flex items-center gap-3 border-l-4 px-4 py-3 text-left transition hover:bg-slate-50 ${placed ? "border-l-emerald-500" : "border-l-transparent"} ${drop.id === selectedDrop?.id ? "bg-cyan-50/70" : placed ? "bg-emerald-50/40" : "bg-white"}`}><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: CABLE_CATEGORY_META[categoryOf(drop)].colour, opacity: placed ? 1 : 0.55 }}>{isSecurity ? deviceNumber(drop.label) ?? drop.cableCount : drop.cableCount}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-slate-800">{drop.label}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{isSecurity ? [store.devices?.[drop.id]?.type, store.devices?.[drop.id]?.model].filter(Boolean).join(" · ") || `Cable ${drop.cables.map((c) => c.cableNumber).join(", ")} · model not set` : drop.cableTypes.join(", ") || "Cable type TBC"}</span></span>{placed ? <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-800"><CheckCircle2 className="h-3 w-3" />On plan</span> : <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-500">Not placed</span>}<span className={`hidden shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold sm:inline ${gopStyle(drop)}`}>{drop.gopQuantity ? `${drop.gopQuantity} × ${drop.gopType}` : "No GOP"}</span></button>; })}</div></section>
+          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center"><div className="flex items-center gap-2"><Network className="h-4 w-4 text-cyan-700" /><h2 className="text-sm font-bold uppercase tracking-[0.1em] text-slate-800">{isSecurity ? "Cameras and access points" : "AV destinations"}</h2><span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{listDrops.length} shown</span></div><div className="inline-flex overflow-hidden rounded-md border border-slate-300 text-xs font-semibold">{([["all", `All ${drops.length}`], ["placed", `On plan ${placedCount}`], ["unplaced", `Not placed ${drops.length - placedCount}`]] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setListFilter(value)} aria-pressed={listFilter === value} className={`border-r border-slate-200 px-2.5 py-1.5 last:border-r-0 ${listFilter === value ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>{label}</button>)}</div><div className="relative sm:ml-auto sm:w-72"><Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Find destination or cable type…" className="h-9 pl-8 text-xs" /></div></div><div className="grid divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y-0">{listDrops.map((drop) => { const placed = Boolean(positions[drop.id]); return <button key={drop.id} onClick={() => selectFromList(drop.id)} className={`flex items-center gap-3 border-l-4 px-4 py-3 text-left transition hover:bg-slate-50 ${placed ? "border-l-emerald-500" : "border-l-transparent"} ${drop.id === selectedDrop?.id ? "bg-cyan-50/70" : placed ? "bg-emerald-50/40" : "bg-white"}`}><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: CABLE_CATEGORY_META[categoryOf(drop)].colour, opacity: placed ? 1 : 0.55 }}>{isSecurity ? deviceNumber(drop.label) ?? drop.cableCount : drop.cableCount}</span><span className="min-w-0 flex-1"><span className="block truncate text-sm font-bold text-slate-800">{drop.label}</span><span className="mt-0.5 block truncate text-xs text-slate-500">{isSecurity ? [store.devices?.[drop.id]?.type, store.devices?.[drop.id]?.model].filter(Boolean).join(" · ") || `Cable ${drop.cables.map((c) => c.cableNumber).join(", ")} · model not set` : drop.cableTypes.join(", ") || "Cable type TBC"}</span></span>{placed ? <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2 py-1 text-[10px] font-bold text-emerald-800"><CheckCircle2 className="h-3 w-3" />On plan</span> : <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-bold text-slate-500">Not placed</span>}<span className={`hidden shrink-0 rounded-full border px-2 py-1 text-[10px] font-bold sm:inline ${gopStyle(drop)}`}>{gopLabel(drop)}</span></button>; })}</div></section>
         </>}
       </main>
     </div>

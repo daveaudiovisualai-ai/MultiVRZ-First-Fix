@@ -1,6 +1,6 @@
 import { confirmAction } from "@/lib/confirmAction";
 import { saveFile } from "@/lib/saveFile";
-import { dropIdForDestination, loadDestinationPlannerStore } from "@/lib/destinationPlanner";
+import { dropIdForDestination, dropPositionForCable, loadDestinationPlannerStore } from "@/lib/destinationPlanner";
 import { isKarrinyup } from "@/lib/sites";
 import type { CableRow } from "@/lib/cableTypes";
 import * as XLSX from "xlsx";
@@ -366,7 +366,7 @@ export default function Consumables() {
     const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
       (Math.abs(a.x - b.x) / 100) * scale + (Math.abs(a.y - b.y) / 100) * aspect * scale;
     return (cable: CableRow) => {
-      const dest = at(cable.destination);
+      const dest = dropPositionForCable(drops.positions, cable);
       if (!dest) return null;
       if (cable.rackPort === "none") {
         const src = at(cable.source);

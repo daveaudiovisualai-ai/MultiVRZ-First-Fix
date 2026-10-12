@@ -4,7 +4,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Crosshair, Minus, Move, Plus, ScanSearch, Server, X } from "lucide-react";
-import type { DestinationDrop, DrawingDocument } from "@/lib/destinationPlanner";
+import { dropGopLabel, type DestinationDrop, type DrawingDocument } from "@/lib/destinationPlanner";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
@@ -38,6 +38,7 @@ function drawingKind(drawing?: DrawingDocument): "image" | "pdf" | "other" | "no
 }
 
 function markerColour(drop: DestinationDrop) {
+  if (drop.gopType === "Field plug") return "border-emerald-100 bg-emerald-600";
   if (drop.gopType === "2-way GOP") return "border-cyan-100 bg-cyan-500";
   if (drop.gopType === "4-way GOP" || drop.gopType === "Multiple 4-way GOP") return "border-violet-100 bg-violet-600";
   return "border-slate-100 bg-slate-600";
@@ -100,7 +101,7 @@ function DropPopup({
           {drop.cableCount} cable{drop.cableCount === 1 ? "" : "s"}
         </span>
         <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-0.5 text-cyan-800">
-          {drop.gopQuantity ? `${drop.gopQuantity} × ${drop.gopType}` : "No GOP"}
+          {dropGopLabel(drop)}
         </span>
         {!marker.placed && <span className="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-amber-800">Not placed yet</span>}
       </div>

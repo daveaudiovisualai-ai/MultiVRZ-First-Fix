@@ -82,6 +82,7 @@ function importCableRows(buffer: ArrayBuffer): CableRow[] {
     signalType: cell(row, ["Signal Type", "Signal"]),
     source: cell(row, ["Source"]),
     destination: cell(row, ["Destination"]),
+    outlet: cell(row, ["Outlet / GOP", "Outlet", "GOP"]) || undefined,
     length: cell(row, ["Length"]),
     patchLocation: cell(row, ["Patch / Rack Location", "Patch / Rack", "Patch Location"]),
     status: normaliseStatus(cell(row, ["Status"])),
