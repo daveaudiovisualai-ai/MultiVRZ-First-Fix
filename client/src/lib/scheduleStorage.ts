@@ -27,13 +27,18 @@ const RECEPTION_DESK_ADDITIONS: [after: string, added: string[]][] = [
   ["N703", ["N227", "N228", "N229", "N230", "N231"]],
 ];
 
+/** KAR-AV P2 removed the lighting button panels BP1–BP3. */
+function isButtonPanel(cable: CableRow) {
+  return /lighting button panel/i.test(cable.destination);
+}
+
 /**
  * KAR-AV P2: the lighting button panels BP1–BP3 are not required, and the reception desk
  * gets the ChamSys lighting touch panel, a CCTV monitor RX and four network points.
  * Cables already in the schedule are left alone; a rack port someone else now uses is left blank.
  */
 export function applyReceptionDeskChanges(cables: CableRow[]): CableRow[] {
-  const result = cables.filter((cable) => !/lighting button panel/i.test(cable.destination));
+  const result = cables.filter((cable) => !isButtonPanel(cable));
   const seed = new Map(KARRINYUP_SWITCH_CABLES.map((cable) => [cable.cableNumber, cable]));
   RECEPTION_DESK_ADDITIONS.forEach(([after, numbers]) => {
     const missing = numbers.filter((n) => !result.some((cable) => cable.cableNumber === n));
@@ -63,6 +68,11 @@ export function readStoredCables(): CableRow[] | null {
       cables = applyReceptionDeskChanges(cables);
       localStorage.setItem(CABLE_STORAGE_KEY, JSON.stringify(cables));
       localStorage.setItem(RECEPTION_DESK_FLAG, "1");
+    }
+    // A device on an older build can save the button panels back; keep them out.
+    if (isKarrinyup() && cables.some(isButtonPanel)) {
+      cables = cables.filter((cable) => !isButtonPanel(cable));
+      localStorage.setItem(CABLE_STORAGE_KEY, JSON.stringify(cables));
     }
     return cables;
   } catch {
